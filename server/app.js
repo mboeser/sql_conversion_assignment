@@ -16,7 +16,7 @@ app.get('/data', function(req,res){
 
     //SQL Query > SELECT data from table
     pg.connect(connectionString, function (err, client, done) {
-        var query = client.query("SELECT id, name, location FROM people ORDER BY name ASC");
+        var query = client.query("SELECT id, name, location, age, spirit_animal, address FROM people ORDER BY name ASC");
 
         // Stream results back one row at a time, push into results array
         query.on('row', function (row) {
@@ -36,13 +36,43 @@ app.get('/data', function(req,res){
     });
 });
 
+// Get SELECT the people information
+app.get('/find', function(req,res){
+    var results = [];
+    var name = req.query.peopleSearch;
+    //SQL Query > SELECT data from table
+    pg.connect(connectionString, function (err, client, done) {
+        var query = client.query("SELECT name FROM people WHERE name ILIKE ($1) ORDER BY name ASC", [name+'%']);
+        console.log(name);
+        // Stream results back one row at a time, push into results array
+        query.on('row', function (row) {
+            results.push(row);
+        });
+
+        // After all data is returned, close connection and return results
+        query.on('end', function () {
+            client.end();
+            return res.json(results);
+        });
+
+        // Handle Errors
+        if (err) {
+            console.log(err);
+        }
+    });
+});
+
+
 // Add a new person
 app.post('/data', function(req,res){
     console.log(req);
 
     var addedPerson = {
         "name" : req.body.peopleAdd,
-        "location" : req.body.locationAdd
+        "location" : req.body.locationAdd,
+        "age" : req.body.peopleAge,
+        "spirit_animal" : req.body.spiritAnimal,
+        "address" : req.body.peopleAddress
     };
 
     pg.connect(connectionString, function (err, client) {
@@ -54,7 +84,8 @@ app.post('/data', function(req,res){
         //console.log(query);
         //client.query(query);
 
-        client.query("INSERT INTO people (name, location) VALUES ($1, $2) RETURNING id", [addedPerson.name, addedPerson.location],
+        client.query("INSERT INTO people (name, location, age, spirit_animal, address) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            [addedPerson.name, addedPerson.location, addedPerson.age, addedPerson.spirit_animal, addedPerson.address],
             function(err, result) {
                 if(err) {
                     console.log("Error inserting data: ", err);
@@ -70,12 +101,33 @@ app.post('/data', function(req,res){
 
 app.delete('/data', function(req,res){
     console.log(req.body.id);
+    var results = [];
+    var id = req.body.id;
+    pg.connect(connectionString, function(err, client, done) {
 
-    Person.findByIdAndRemove({"_id" : req.body.id}, function(err, data){
-        if(err) console.log(err);
-        res.send(data);
-    });
+        if(err) {
+            done();
+            console.log(err);
+            return res.status(500).json({ success: false, data: err});
+        }
 
+        client.query("DELETE FROM people WHERE id=($1)", [id]);
+
+        // SQL Query > Select Data
+        var query = client.query("SELECT * FROM people ORDER BY id ASC");
+
+        // Stream results back one row at a time
+        query.on('row', function(row) {
+            results.push(row);
+        });
+
+        // After all data is returned, close connection and return results
+        query.on('end', function() {
+            done();
+            return res.json(results);
+        });
+
+});
 
 });
 

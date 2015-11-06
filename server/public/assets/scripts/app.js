@@ -7,7 +7,7 @@ $(document).ready(function(){
          values[field.name] = field.value;
       });
 
-      getData(values);
+      searchData(values);
    });
 
    $("#addSomeone").submit(addSomeone);
@@ -17,9 +17,23 @@ $(document).ready(function(){
 });
 
 function getData(values){
+    $.ajax({
+        type: "GET",
+        url: "/data",
+        data: values,
+        success: function(data){
+            updateDOM(data);
+        }
+    })
+}
+
+
+
+
+function searchData(values){
    $.ajax({
       type: "GET",
-      url: "/data",
+      url: "/find",
       data: values,
       success: function(data){
          updateDOM(data);
@@ -63,13 +77,16 @@ function deletePerson(){
 
 function updateDOM(data){
    $("#peopleContainer").empty();
-
+    console.log(data);
    for(var i = 0; i < data.length; i++){
       var el = "<div class='well col-md-3'>" +
                   "<p>" + data[i].name + "</p>" +
                   "<p>" + data[i].location + "</p>" +
-                  "<button class='delete btn btn-danger' data-id='" +
-                     data[i]._id + "'>Delete</button>" +
+                "<p>" + data[i].age + "</p>" +
+          "<p>" + data[i].spirit_animal + "</p>" +
+          "<p>" + data[i].address + "</p>" +
+          "<button class='delete btn btn-danger' data-id='" +
+                     data[i].id + "'>Delete</button>" +
                "</div>";
 
       $("#peopleContainer").append(el);
